@@ -1,0 +1,28 @@
+# Flutter build / temp files
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# IDE / editor
+.idea/
+.vscode/
+
+# Android
+android/.gradle/
+android/local.properties
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+
+# macOS / Linux / Windows temp
+.metadata/
+*.log
+
+# Windows reserved device name
+nul
+
+# Environment variables (API keys)
+.env
