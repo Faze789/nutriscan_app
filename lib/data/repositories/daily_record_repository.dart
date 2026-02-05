@@ -1,46 +1,67 @@
-import '../datasources/local_database.dart';
+import '../../services/supabase_service.dart';
 import '../models/daily_record.dart';
 
 class DailyRecordRepository {
-  static const _collection = 'daily_records';
+  static const _table = 'daily_records';
 
   Future<DailyRecord?> getRecordForDate(String uid, DateTime date) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final dayStart = DateTime(date.year, date.month, date.day);
-    final match = items.where((e) =>
-        e['userUid'] == uid &&
-        DateTime.parse(e['date'] as String).year == dayStart.year &&
-        DateTime.parse(e['date'] as String).month == dayStart.month &&
-        DateTime.parse(e['date'] as String).day == dayStart.day);
-    if (match.isEmpty) return null;
-    return DailyRecord.fromJson(match.first);
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('user_id', uid)
+        .eq('date', dateStr)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return DailyRecord.fromSupabase(response);
   }
 
   Future<void> saveRecord(DailyRecord record) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final dayStart = DateTime(record.date.year, record.date.month, record.date.day);
-    items.removeWhere((e) =>
-        e['userUid'] == record.userUid &&
-        DateTime.parse(e['date'] as String).year == dayStart.year &&
-        DateTime.parse(e['date'] as String).month == dayStart.month &&
-        DateTime.parse(e['date'] as String).day == dayStart.day);
-    items.add(record.toJson());
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).upsert(
+      record.toSupabase(),
+      onConflict: 'user_id,date',
+    );
   }
 
   Future<List<DailyRecord>> getRecentRecords(String uid, {int days = 7}) async {
-    final items = await LocalDatabase.readAll(_collection);
     final cutoff = DateTime.now().subtract(Duration(days: days));
-    return items
-        .map((e) => DailyRecord.fromJson(e))
-        .where((e) => e.userUid == uid && e.date.isAfter(cutoff))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final cutoffStr = '${cutoff.year}-${cutoff.month.toString().padLeft(2, '0')}-${cutoff.day.toString().padLeft(2, '0')}';
+
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('user_id', uid)
+        .gte('date', cutoffStr)
+        .order('date', ascending: true);
+
+    return (response as List)
+        .map((e) => DailyRecord.fromSupabase(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<DailyRecord>> getRecordsForRange(
+      String uid, DateTime start, DateTime end) async {
+    final startStr =
+        '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+    final endStr =
+        '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
+
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('user_id', uid)
+        .gte('date', startStr)
+        .lte('date', endStr)
+        .order('date', ascending: true);
+
+    return (response as List)
+        .map((e) => DailyRecord.fromSupabase(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> deleteRecord(String id) async {
-    final items = await LocalDatabase.readAll(_collection);
-    items.removeWhere((e) => e['id'] == id);
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).delete().eq('id', id);
   }
 }

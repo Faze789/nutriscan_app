@@ -102,18 +102,14 @@ class VideoFeedScreen extends ConsumerWidget {
   }
 
   Future<void> _openVideo(BuildContext context, VideoRecommendation video) async {
-    // Try opening via url_launcher first
     final uri = Uri.tryParse(video.youtubeUrl);
     if (uri != null) {
       try {
         final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
         if (launched) return;
-      } catch (_) {
-        // Fall through to dialog fallback
-      }
+      } catch (_) {}
     }
 
-    // Fallback: show video detail dialog
     if (!context.mounted) return;
     showDialog(
       context: context,

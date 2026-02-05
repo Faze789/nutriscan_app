@@ -76,14 +76,12 @@ class _MacroBarState extends State<MacroBar> with SingleTickerProviderStateMixin
                 height: 8,
                 child: Stack(
                   children: [
-                    // Background
                     Container(
                       decoration: BoxDecoration(
                         color: widget.color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    // Animated fill with gradient
                     FractionallySizedBox(
                       widthFactor: _barAnim.value,
                       child: Container(

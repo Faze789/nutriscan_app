@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../services/connectivity_service.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../discover/discover_screen.dart';
 import '../scan/scan_screen.dart';
@@ -19,7 +20,7 @@ class _HomeShellState extends State<HomeShell> {
   final _screens = const [
     DashboardScreen(),
     DiscoverScreen(),
-    ScanScreen(),
+    SizedBox(),
     VideoFeedScreen(),
     DailyRecordScreen(),
   ];
@@ -27,13 +28,22 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: IndexedStack(index: _index, children: _screens),
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
+              child: IndexedStack(index: _index, children: _screens),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        backgroundColor: Colors.white.withValues(alpha: 0.85),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.darkSurface.withValues(alpha: 0.95)
+            : Colors.white.withValues(alpha: 0.85),
         indicatorColor: AppTheme.primary.withValues(alpha: 0.15),
         onDestinationSelected: (i) {
           if (i == 2) {

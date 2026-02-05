@@ -18,6 +18,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _passCtrl = TextEditingController();
   bool _loading = false;
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -27,7 +35,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
-      ref.invalidate(authStateProvider);
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => ProfileSetupScreen(uid: uid, name: _nameCtrl.text.trim(), email: _emailCtrl.text.trim())),

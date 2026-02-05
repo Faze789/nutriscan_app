@@ -63,7 +63,7 @@ class _LogWaterSheetState extends ConsumerState<LogWaterSheet> {
       await repo.saveRecord(existing.copyWith(waterGlasses: total, waterMl: total * 250));
     } else {
       await repo.saveRecord(DailyRecord(
-        id: '${uid}_${now.year}${now.month}${now.day}',
+        id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
         userUid: uid,
         date: now,
         waterGlasses: _glasses,

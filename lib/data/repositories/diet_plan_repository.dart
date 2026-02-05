@@ -1,22 +1,23 @@
-import '../datasources/local_database.dart';
+import '../../services/supabase_service.dart';
 import '../models/diet_plan.dart';
 
 class DietPlanRepository {
-  static const _collection = 'diet_plans';
+  static const _table = 'diet_plans';
 
   Future<DietPlan?> getLatestPlan(String uid) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final plans = items
-        .map((e) => DietPlan.fromJson(e))
-        .where((e) => e.userUid == uid)
-        .toList()
-      ..sort((a, b) => b.generatedAt.compareTo(a.generatedAt));
-    return plans.isEmpty ? null : plans.first;
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('user_id', uid)
+        .order('generated_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return DietPlan.fromSupabase(response);
   }
 
   Future<void> savePlan(DietPlan plan) async {
-    final items = await LocalDatabase.readAll(_collection);
-    items.add(plan.toJson());
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).upsert(plan.toSupabase());
   }
 }

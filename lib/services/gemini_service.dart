@@ -8,196 +8,57 @@ import '../data/models/user_profile.dart';
 import '../data/models/health_article.dart';
 import '../data/models/video_recommendation.dart';
 
-/// AI service that tries Gemini first, then falls back to Groq (Llama 4 Scout)
-/// when all Gemini quotas are exhausted.
 class GeminiService {
   final _client = http.Client();
 
-  // =========================================================================
-  // PUBLIC API
-  // =========================================================================
-
-  /// Analyze a food image and return structured nutritional data.
   Future<List<FoodItem>> analyzeImage(Uint8List imageBytes) async {
     final base64Image = base64Encode(imageBytes);
-    final text = await _callWithFallback(
+    final text = await _callGroq(
       prompt: _imageAnalysisPrompt,
       base64Image: base64Image,
     );
     return _parseFoodItems(text);
   }
 
-  /// Generate a 7-day meal plan based on the user profile.
-  /// Uses gemini-1.5-flash as primary for reliability.
   Future<List<DayPlan>> generateMealPlan(UserProfile profile) async {
-    final text = await _callWithFallback(
-      prompt: _mealPlanPrompt(profile),
-      preferFlash: true,
-    );
+    final text = await _callGroq(prompt: _mealPlanPrompt(profile));
     return _parseDayPlans(text);
   }
 
-  /// Generate health articles tailored to the user's profile.
-  Future<List<HealthArticle>> generateHealthArticles(UserProfile profile) async {
-    final text = await _callWithFallback(
-      prompt: _healthArticlesPrompt(profile),
-    );
+  Future<List<HealthArticle>> generateHealthArticles(
+    UserProfile profile,
+  ) async {
+    final text = await _callGroq(prompt: _healthArticlesPrompt(profile));
     return _parseHealthArticles(text);
   }
 
-  /// Generate video recommendations based on user goals.
   Future<List<VideoRecommendation>> generateVideoRecommendations(
-      UserProfile profile) async {
-    final text = await _callWithFallback(
-      prompt: _videoRecommendationsPrompt(profile),
-    );
+    UserProfile profile,
+  ) async {
+    final text = await _callGroq(prompt: _videoRecommendationsPrompt(profile));
     return _parseVideoRecommendations(text);
   }
-
-  // =========================================================================
-  // ORCHESTRATION — Gemini → Groq fallback
-  // =========================================================================
-
-  Future<String> _callWithFallback({
-    required String prompt,
-    String? base64Image,
-    bool preferFlash = false,
-  }) async {
-    // 1) Try all Gemini models
-    try {
-      return await _callGemini(
-        prompt: prompt,
-        base64Image: base64Image,
-        preferFlash: preferFlash,
-      );
-    } catch (e) {
-      final msg = e.toString().toLowerCase();
-      final isQuota = msg.contains('quota') ||
-          msg.contains('resource_exhausted') ||
-          msg.contains('429') ||
-          msg.contains('all gemini models');
-      if (!isQuota) rethrow;
-    }
-
-    // 2) Gemini exhausted — try Groq
-    if (AppConstants.groqApiKey == 'YOUR_GROQ_API_KEY' ||
-        AppConstants.groqApiKey.isEmpty) {
-      throw Exception(
-        'Gemini quota exhausted & no Groq key configured.\n'
-        'Get a FREE key at https://console.groq.com and set it in\n'
-        'lib/core/constants/app_constants.dart → groqApiKey',
-      );
-    }
-
-    return _callGroq(prompt: prompt, base64Image: base64Image);
-  }
-
-  // =========================================================================
-  // GEMINI — cycles through models, retries on 429
-  // =========================================================================
-
-  Future<String> _callGemini({
-    required String prompt,
-    String? base64Image,
-    bool preferFlash = false,
-  }) async {
-    // When preferFlash, put gemini-1.5-flash first for reliability
-    final models = preferFlash
-        ? ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b']
-        : AppConstants.geminiModels;
-
-    final List<Map<String, dynamic>> parts = [
-      {'text': prompt},
-      if (base64Image != null)
-        {
-          'inline_data': {
-            'mime_type': 'image/jpeg',
-            'data': base64Image,
-          }
-        },
-    ];
-
-    for (final model in models) {
-      final url = Uri.parse(
-        '${AppConstants.geminiBaseUrl}/$model:generateContent'
-        '?key=${AppConstants.geminiApiKey}',
-      );
-
-      final body = jsonEncode({
-        'contents': [
-          {'parts': parts}
-        ],
-        'generationConfig': {
-          'response_mime_type': 'application/json',
-          'temperature': 0.3,
-        },
-      });
-
-      for (int attempt = 0; attempt < 2; attempt++) {
-        final res = await _client.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        );
-
-        if (res.statusCode == 200) {
-          return _extractGeminiText(res.body);
-        }
-
-        if (_isQuotaError(res)) {
-          if (attempt == 0) {
-            await Future.delayed(const Duration(seconds: 5));
-            continue;
-          }
-          break; // next model
-        }
-
-        throw Exception(
-            'Gemini error ($model): ${res.statusCode} ${res.body}');
-      }
-    }
-
-    throw Exception('All Gemini models quota exhausted');
-  }
-
-  String _extractGeminiText(String responseBody) {
-    final json = jsonDecode(responseBody) as Map<String, dynamic>;
-    final candidates = json['candidates'] as List<dynamic>?;
-    if (candidates == null || candidates.isEmpty) {
-      throw Exception('No candidates in Gemini response');
-    }
-    final content = candidates[0]['content'] as Map<String, dynamic>;
-    final parts = content['parts'] as List<dynamic>;
-    return parts[0]['text'] as String;
-  }
-
-  bool _isQuotaError(http.Response res) {
-    if (res.statusCode == 429 || res.statusCode == 503) return true;
-    final b = res.body.toLowerCase();
-    return b.contains('quota') ||
-        b.contains('rate') ||
-        b.contains('resource_exhausted');
-  }
-
-  // =========================================================================
-  // GROQ — Llama 4 Scout (OpenAI-compatible endpoint)
-  // =========================================================================
 
   Future<String> _callGroq({
     required String prompt,
     String? base64Image,
   }) async {
+    if (AppConstants.groqApiKey.isEmpty) {
+      throw Exception(
+        'No Groq API key configured.\n'
+        'Get a FREE key at https://console.groq.com and add it to your .env file:\n'
+        'GROQ_API_KEY=your_api_key_here',
+      );
+    }
+
     final url = Uri.parse(AppConstants.groqBaseUrl);
 
-    // Build message content
     final List<Map<String, dynamic>> content = [
       {'type': 'text', 'text': prompt},
       if (base64Image != null)
         {
           'type': 'image_url',
-          'image_url': {
-            'url': 'data:image/jpeg;base64,$base64Image',
-          },
+          'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
         },
     ];
 
@@ -218,7 +79,7 @@ class GeminiService {
           'Authorization': 'Bearer ${AppConstants.groqApiKey}',
         },
         body: body,
-      );
+      ).timeout(const Duration(seconds: 60));
 
       if (res.statusCode == 200) {
         return _extractGroqText(res.body);
@@ -244,7 +105,6 @@ class GeminiService {
     final message = choices[0]['message'] as Map<String, dynamic>;
     final text = message['content'] as String;
 
-    // Groq may wrap JSON in ```json ... ``` markdown — strip it
     final cleaned = text
         .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
         .replaceAll(RegExp(r'^```\s*$', multiLine: true), '')
@@ -252,31 +112,18 @@ class GeminiService {
     return cleaned;
   }
 
-  // =========================================================================
-  // JSON SANITIZER — handles common AI response issues
-  // =========================================================================
-
-  /// Cleans raw AI text into valid JSON. Handles:
-  /// - Markdown code fences
-  /// - Trailing commas before } or ]
-  /// - Leading/trailing whitespace
-  /// - BOM characters
   static String _sanitizeJson(String raw) {
     var text = raw.trim();
 
-    // Strip BOM
     if (text.startsWith('\uFEFF')) text = text.substring(1);
 
-    // Strip markdown code fences
     text = text
         .replaceAll(RegExp(r'^```(?:json)?\s*', multiLine: true), '')
         .replaceAll(RegExp(r'^```\s*$', multiLine: true), '')
         .trim();
 
-    // Remove trailing commas before } or ]
     text = text.replaceAll(RegExp(r',\s*([}\]])'), r'$1');
 
-    // Find the first { or [ and last } or ]
     final firstBrace = text.indexOf(RegExp(r'[{\[]'));
     final lastBrace = text.lastIndexOf(RegExp(r'[}\]]'));
     if (firstBrace >= 0 && lastBrace > firstBrace) {
@@ -286,17 +133,16 @@ class GeminiService {
     return text;
   }
 
-  // =========================================================================
-  // PARSERS (with sanitization)
-  // =========================================================================
-
-  /// Handles tags being either a List<dynamic> or a comma-separated String
   static List<String> _parseTags(dynamic raw) {
     if (raw is List) {
       return raw.map((t) => t.toString()).toList();
     }
     if (raw is String) {
-      return raw.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+      return raw
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
     }
     return [];
   }
@@ -304,17 +150,17 @@ class GeminiService {
   List<FoodItem> _parseFoodItems(String text) {
     final cleaned = _sanitizeJson(text);
     final Map<String, dynamic> json = jsonDecode(cleaned);
-    final List<dynamic> items = json['foods'] as List<dynamic>;
+    final List<dynamic> items = (json['foods'] as List<dynamic>?) ?? [];
 
     return items.map((item) {
       final m = item as Map<String, dynamic>;
       return FoodItem(
-        name: m['name'] as String,
-        portion: m['portion'] as String,
-        calories: (m['calories'] as num).toDouble(),
-        protein: (m['protein'] as num).toDouble(),
-        carbs: (m['carbs'] as num).toDouble(),
-        fat: (m['fat'] as num).toDouble(),
+        name: (m['name'] as String?) ?? 'Unknown',
+        portion: (m['portion'] as String?) ?? '1 serving',
+        calories: (m['calories'] as num?)?.toDouble() ?? 0,
+        protein: (m['protein'] as num?)?.toDouble() ?? 0,
+        carbs: (m['carbs'] as num?)?.toDouble() ?? 0,
+        fat: (m['fat'] as num?)?.toDouble() ?? 0,
       );
     }).toList();
   }
@@ -322,25 +168,25 @@ class GeminiService {
   List<DayPlan> _parseDayPlans(String text) {
     final cleaned = _sanitizeJson(text);
     final Map<String, dynamic> json = jsonDecode(cleaned);
-    final List<dynamic> days = json['days'] as List<dynamic>;
+    final List<dynamic> days = (json['days'] as List<dynamic>?) ?? [];
 
     return days.map((day) {
       final d = day as Map<String, dynamic>;
-      final List<dynamic> meals = d['meals'] as List<dynamic>;
+      final List<dynamic> meals = (d['meals'] as List<dynamic>?) ?? [];
       return DayPlan(
-        dayNumber: d['day_number'] as int,
-        dayName: d['day_name'] as String,
-        totalCalories: (d['total_calories'] as num).toDouble(),
+        dayNumber: (d['day_number'] as num?)?.toInt() ?? 1,
+        dayName: (d['day_name'] as String?) ?? 'Day',
+        totalCalories: (d['total_calories'] as num?)?.toDouble() ?? 0,
         meals: meals.map((m) {
           final meal = m as Map<String, dynamic>;
           return MealPlan(
-            mealType: meal['meal_type'] as String,
-            name: meal['name'] as String,
-            description: meal['description'] as String,
-            calories: (meal['calories'] as num).toDouble(),
-            protein: (meal['protein'] as num).toDouble(),
-            carbs: (meal['carbs'] as num).toDouble(),
-            fat: (meal['fat'] as num).toDouble(),
+            mealType: (meal['meal_type'] as String?) ?? 'snack',
+            name: (meal['name'] as String?) ?? 'Meal',
+            description: (meal['description'] as String?) ?? '',
+            calories: (meal['calories'] as num?)?.toDouble() ?? 0,
+            protein: (meal['protein'] as num?)?.toDouble() ?? 0,
+            carbs: (meal['carbs'] as num?)?.toDouble() ?? 0,
+            fat: (meal['fat'] as num?)?.toDouble() ?? 0,
           );
         }).toList(),
       );
@@ -350,16 +196,16 @@ class GeminiService {
   List<HealthArticle> _parseHealthArticles(String text) {
     final cleaned = _sanitizeJson(text);
     final json = jsonDecode(cleaned) as Map<String, dynamic>;
-    final items = json['articles'] as List<dynamic>;
+    final items = (json['articles'] as List<dynamic>?) ?? [];
     final now = DateTime.now();
     return items.map((e) {
       final m = e as Map<String, dynamic>;
       return HealthArticle(
-        id: m['id'] as String,
-        title: m['title'] as String,
-        summary: m['summary'] as String,
-        content: m['content'] as String,
-        category: m['category'] as String,
+        id: (m['id'] as String?) ?? 'art_${now.millisecondsSinceEpoch}',
+        title: (m['title'] as String?) ?? 'Health Article',
+        summary: (m['summary'] as String?) ?? '',
+        content: (m['content'] as String?) ?? '',
+        category: (m['category'] as String?) ?? 'Nutrition',
         tags: _parseTags(m['tags']),
         generatedAt: now,
       );
@@ -369,27 +215,23 @@ class GeminiService {
   List<VideoRecommendation> _parseVideoRecommendations(String text) {
     final cleaned = _sanitizeJson(text);
     final json = jsonDecode(cleaned) as Map<String, dynamic>;
-    final items = json['videos'] as List<dynamic>;
+    final items = (json['videos'] as List<dynamic>?) ?? [];
     final now = DateTime.now();
     return items.map((e) {
       final m = e as Map<String, dynamic>;
       return VideoRecommendation(
-        id: m['id'] as String,
-        title: m['title'] as String,
-        channelName: m['channelName'] as String,
-        youtubeUrl: m['youtubeUrl'] as String,
-        thumbnailUrl: m['thumbnailUrl'] as String,
-        category: m['category'] as String,
-        targetGoal: m['targetGoal'] as String,
-        durationSeconds: (m['durationSeconds'] as num).toInt(),
+        id: (m['id'] as String?) ?? 'vid_${now.millisecondsSinceEpoch}',
+        title: (m['title'] as String?) ?? 'Video',
+        channelName: (m['channelName'] as String?) ?? 'Unknown',
+        youtubeUrl: (m['youtubeUrl'] as String?) ?? '',
+        thumbnailUrl: (m['thumbnailUrl'] as String?) ?? '',
+        category: (m['category'] as String?) ?? 'General',
+        targetGoal: (m['targetGoal'] as String?) ?? 'general',
+        durationSeconds: (m['durationSeconds'] as num?)?.toInt() ?? 0,
         addedAt: now,
       );
     }).toList();
   }
-
-  // =========================================================================
-  // PROMPTS
-  // =========================================================================
 
   static const String _imageAnalysisPrompt = '''
 You are a professional nutritionist AI. Analyze the food in this image.
@@ -417,7 +259,8 @@ Rules:
 - CRITICAL: Return ONLY the raw JSON object. No markdown fences, no extra text.
 ''';
 
-  static String _mealPlanPrompt(UserProfile profile) => '''
+  static String _mealPlanPrompt(UserProfile profile) =>
+      '''
 You are a certified dietitian AI. Generate a balanced 7-day meal plan.
 
 User profile:
@@ -463,7 +306,8 @@ Rules:
 - CRITICAL: Return ONLY the raw JSON object. No markdown fences, no extra text.
 ''';
 
-  static String _healthArticlesPrompt(UserProfile profile) => '''
+  static String _healthArticlesPrompt(UserProfile profile) =>
+      '''
 You are a health and nutrition content writer in 2026. Generate 8 unique health articles with the latest findings and practical advice.
 
 User profile:
@@ -495,7 +339,8 @@ Rules:
 - CRITICAL: Return ONLY the raw JSON object. No markdown fences, no extra text.
 ''';
 
-  static String _videoRecommendationsPrompt(UserProfile profile) => '''
+  static String _videoRecommendationsPrompt(UserProfile profile) =>
+      '''
 You are a fitness content curator. Suggest 10 real YouTube videos relevant to the user.
 
 User profile:
@@ -513,7 +358,7 @@ Return ONLY valid JSON. No markdown code fences, no trailing commas:
       "youtubeUrl": "string — full YouTube URL like https://www.youtube.com/watch?v=VIDEO_ID",
       "thumbnailUrl": "string — YouTube thumbnail URL using https://img.youtube.com/vi/VIDEO_ID/hqdefault.jpg",
       "category": "string — one of: Workout, Nutrition, Cooking, Yoga, Motivation",
-      "targetGoal": "string — one of: lose_weight, gain_muscle, maintain, general",
+      "targetGoal": "string — one of: lose, gain, maintain, general",
       "durationSeconds": number
     }
   ]
@@ -522,8 +367,8 @@ Return ONLY valid JSON. No markdown code fences, no trailing commas:
 Rules:
 - Suggest real, popular YouTube channels (e.g. AthleanX, Blogilates, Pick Up Limes, Yoga With Adriene, Natacha Oceane, Jeff Nippard).
 - HEAVILY prioritize videos matching the user's goal: ${profile.goal.label}.
-- For lose_weight goals: focus on HIIT, cardio, low-calorie recipes, calorie deficit guides.
-- For gain_muscle goals: focus on strength training, high-protein recipes, bulking guides.
+- For lose goals: focus on HIIT, cardio, low-calorie recipes, calorie deficit guides.
+- For gain goals: focus on strength training, high-protein recipes, bulking guides.
 - For maintain goals: focus on balanced routines, meal prep, general wellness.
 - Mix categories for variety but weight toward the user's goal.
 - CRITICAL: Use REAL YouTube video IDs. Return ONLY the raw JSON object.

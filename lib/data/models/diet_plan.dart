@@ -22,9 +22,25 @@ class DietPlan {
         id: json['id'] as String,
         userUid: json['userUid'] as String,
         generatedAt: DateTime.parse(json['generatedAt'] as String),
-        days: (json['days'] as List)
-            .map((e) => DayPlan.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        days: (json['days'] as List?)
+            ?.map((e) => DayPlan.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
+      );
+
+  Map<String, dynamic> toSupabase() => {
+        'id': id,
+        'user_id': userUid,
+        'generated_at': generatedAt.toIso8601String(),
+        'days': days.map((e) => e.toJson()).toList(),
+      };
+
+  factory DietPlan.fromSupabase(Map<String, dynamic> json) => DietPlan(
+        id: json['id'] as String,
+        userUid: json['user_id'] as String,
+        generatedAt: DateTime.parse(json['generated_at'] as String),
+        days: (json['days'] as List?)
+            ?.map((e) => DayPlan.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
       );
 }
 
@@ -51,9 +67,9 @@ class DayPlan {
   factory DayPlan.fromJson(Map<String, dynamic> json) => DayPlan(
         dayNumber: json['dayNumber'] as int,
         dayName: json['dayName'] as String,
-        meals: (json['meals'] as List)
-            .map((e) => MealPlan.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        meals: (json['meals'] as List?)
+            ?.map((e) => MealPlan.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
         totalCalories: (json['totalCalories'] as num).toDouble(),
       );
 }

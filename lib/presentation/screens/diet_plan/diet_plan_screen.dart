@@ -24,10 +24,11 @@ class _DietPlanScreenState extends ConsumerState<DietPlanScreen> {
     try {
       final days = await ref.read(geminiServiceProvider).generateMealPlan(profile);
       final uid = await ref.read(currentUidProvider.future);
+      if (uid == null) return;
 
       final plan = DietPlan(
         id: const Uuid().v4(),
-        userUid: uid!,
+        userUid: uid,
         generatedAt: DateTime.now(),
         days: days,
       );
@@ -127,7 +128,6 @@ class _DayView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Day summary
         Card(
           color: AppTheme.primary.withValues(alpha: 0.05),
           child: Padding(

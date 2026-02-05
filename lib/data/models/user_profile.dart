@@ -69,6 +69,42 @@ class UserProfile {
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
+
+  Map<String, dynamic> toSupabase() => {
+        'id': uid,
+        'name': name,
+        'email': email,
+        'weight_kg': weightKg,
+        'height_cm': heightCm,
+        'age': age,
+        'is_male': isMale,
+        'activity_level': activityLevel.name,
+        'goal': goal.name,
+        'daily_calorie_target': dailyCalorieTarget,
+        'protein_target_g': proteinTargetG,
+        'carbs_target_g': carbsTargetG,
+        'fat_target_g': fatTargetG,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+
+  factory UserProfile.fromSupabase(Map<String, dynamic> json) => UserProfile(
+        uid: json['id'] as String,
+        name: json['name'] as String,
+        email: json['email'] as String,
+        weightKg: (json['weight_kg'] as num).toDouble(),
+        heightCm: (json['height_cm'] as num).toDouble(),
+        age: json['age'] as int,
+        isMale: json['is_male'] as bool,
+        activityLevel: ActivityLevel.values.byName(json['activity_level'] as String),
+        goal: DietGoal.values.byName(json['goal'] as String),
+        dailyCalorieTarget: (json['daily_calorie_target'] as num).toDouble(),
+        proteinTargetG: (json['protein_target_g'] as num).toDouble(),
+        carbsTargetG: (json['carbs_target_g'] as num).toDouble(),
+        fatTargetG: (json['fat_target_g'] as num).toDouble(),
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
+      );
 }
 
 enum ActivityLevel {

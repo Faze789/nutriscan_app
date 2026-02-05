@@ -4,7 +4,7 @@ import '../../../core/utils/calorie_calculator.dart';
 import '../../../data/models/user_profile.dart';
 import '../../providers/providers.dart';
 import '../../providers/dashboard_provider.dart';
-import '../dashboard/dashboard_screen.dart';
+import '../home/home_shell.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   final String uid;
@@ -32,13 +32,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   DietGoal _goal = DietGoal.maintain;
   bool _loading = false;
 
+  @override
+  void dispose() {
+    _weightCtrl.dispose();
+    _heightCtrl.dispose();
+    _ageCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    final weight = double.parse(_weightCtrl.text);
-    final height = double.parse(_heightCtrl.text);
-    final age = int.parse(_ageCtrl.text);
+    final weight = double.tryParse(_weightCtrl.text);
+    final height = double.tryParse(_heightCtrl.text);
+    final age = int.tryParse(_ageCtrl.text);
+    if (weight == null || height == null || age == null) return;
 
     final bmr = CalorieCalculator.calculateBMR(
       weightKg: weight, heightCm: height, age: age, isMale: _isMale,
@@ -63,14 +72,24 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       fatTargetG: macros['fat']!,
     );
 
-    await ref.read(userRepoProvider).saveUser(profile);
-    ref.invalidate(userProfileProvider);
+    try {
+      await ref.read(userRepoProvider).saveUser(profile);
+      ref.invalidate(userProfileProvider);
 
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        (_) => false,
-      );
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeShell()),
+          (_) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save profile: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return;
     }
   }
 
@@ -88,7 +107,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               Text('Tell us about yourself', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 24),
 
-              // Gender
               Row(
                 children: [
                   const Text('Gender: '),

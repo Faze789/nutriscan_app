@@ -5,6 +5,7 @@ class WaterTracker extends StatelessWidget {
   final int target;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final VoidCallback? onTap;
 
   const WaterTracker({
     super.key,
@@ -12,11 +13,15 @@ class WaterTracker extends StatelessWidget {
     this.target = 8,
     required this.onAdd,
     required this.onRemove,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -75,6 +80,7 @@ class WaterTracker extends StatelessWidget {
           ],
         ),
       ],
+    ),
     );
   }
 }

@@ -9,12 +9,17 @@ import '../../providers/daily_record_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/providers.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/quick_add_sheet.dart';
+import '../../providers/weight_provider.dart';
 import '../../widgets/water_tracker.dart';
+import '../water/water_detail_screen.dart';
+import '../weight/weight_progress_screen.dart';
+import '../../../data/models/weight_log.dart';
+import 'package:uuid/uuid.dart';
 import '../../widgets/weekly_chart.dart';
 import 'log_exercise_sheet.dart';
 import 'log_water_sheet.dart';
 
-/// Filter options for the log section
 enum LogFilter { all, meals, exercise, water }
 
 class DailyRecordScreen extends ConsumerStatefulWidget {
@@ -47,7 +52,6 @@ class _DailyRecordScreenState extends ConsumerState<DailyRecordScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text('Activity Log',
@@ -61,7 +65,6 @@ class _DailyRecordScreenState extends ConsumerState<DailyRecordScreen>
           ),
           const SizedBox(height: 12),
 
-          // Tab bar: Today / History
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ClipRRect(
@@ -95,7 +98,6 @@ class _DailyRecordScreenState extends ConsumerState<DailyRecordScreen>
           ),
           const SizedBox(height: 8),
 
-          // Tab content
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -110,8 +112,6 @@ class _DailyRecordScreenState extends ConsumerState<DailyRecordScreen>
     );
   }
 }
-
-// ─── TODAY TAB ───────────────────────────────────────────────────────────────
 
 class _TodayTab extends ConsumerWidget {
   final LogFilter filter;
@@ -135,7 +135,6 @@ class _TodayTab extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         physics: const BouncingScrollPhysics(),
         children: [
-          // Quick action buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -176,12 +175,26 @@ class _TodayTab extends ConsumerWidget {
                     onTap: () => _showWeightDialog(context, ref),
                   ),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.favorite_outlined,
+                    label: 'Quick Add',
+                    color: const Color(0xFFFF5722),
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => const QuickAddSheet(),
+                    ).then((_) {
+                      ref.invalidate(todayRecordProvider);
+                    }),
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Water tracker card
           GlassCard(
             child: todayAsync.when(
               loading: () => const SizedBox(height: 60, child: Center(child: CircularProgressIndicator())),
@@ -190,12 +203,14 @@ class _TodayTab extends ConsumerWidget {
                 glasses: record?.waterGlasses ?? 0,
                 onAdd: () => _updateWater(ref, record?.waterGlasses ?? 0, 1),
                 onRemove: () => _updateWater(ref, record?.waterGlasses ?? 0, -1),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const WaterDetailScreen()),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Filter chips
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Wrap(
@@ -214,7 +229,6 @@ class _TodayTab extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Today's summary card
           todayAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -230,7 +244,6 @@ class _TodayTab extends ConsumerWidget {
             },
           ),
 
-          // Today's meals (if filter allows)
           if (filter == LogFilter.all || filter == LogFilter.meals)
             entriesAsync.when(
               loading: () => const SizedBox.shrink(),
@@ -253,7 +266,6 @@ class _TodayTab extends ConsumerWidget {
 
           const SizedBox(height: 20),
 
-          // Weekly chart
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text('Weekly Overview',
@@ -286,7 +298,7 @@ class _TodayTab extends ConsumerWidget {
     } else {
       final now = DateTime.now();
       await repo.saveRecord(DailyRecord(
-        id: '${uid}_${now.year}${now.month}${now.day}',
+        id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
         userUid: uid,
         date: now,
         waterGlasses: glasses,
@@ -298,17 +310,31 @@ class _TodayTab extends ConsumerWidget {
 
   void _showWeightDialog(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
+    final notesController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Log Weight'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            hintText: 'Weight in kg',
-            suffixText: 'kg',
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'Weight in kg',
+                suffixText: 'kg',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                hintText: 'Notes (optional)',
+                prefixIcon: Icon(Icons.notes, size: 18),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -325,13 +351,25 @@ class _TodayTab extends ConsumerWidget {
               } else {
                 final now = DateTime.now();
                 await repo.saveRecord(DailyRecord(
-                  id: '${uid}_${now.year}${now.month}${now.day}',
+                  id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
                   userUid: uid,
                   date: now,
                   weightKg: weight,
                 ));
               }
+
+              final weightLogRepo = ref.read(weightLogRepoProvider);
+              await weightLogRepo.addLog(WeightLog(
+                id: const Uuid().v4(),
+                userUid: uid,
+                date: DateTime.now(),
+                weightKg: weight,
+                notes: notesController.text.isNotEmpty ? notesController.text : null,
+              ));
+
               ref.invalidate(todayRecordProvider);
+              ref.invalidate(weightLogsProvider);
+              ref.invalidate(latestWeightProvider);
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Save'),
@@ -341,8 +379,6 @@ class _TodayTab extends ConsumerWidget {
     );
   }
 }
-
-// ─── HISTORY TAB ─────────────────────────────────────────────────────────────
 
 class _HistoryTab extends ConsumerWidget {
   const _HistoryTab();
@@ -369,7 +405,6 @@ class _HistoryTab extends ConsumerWidget {
           );
         }
 
-        // Group by date (newest first)
         final sorted = List<DailyRecord>.from(records)..sort((a, b) => b.date.compareTo(a.date));
 
         return ListView.builder(
@@ -382,8 +417,6 @@ class _HistoryTab extends ConsumerWidget {
     );
   }
 }
-
-// ─── WIDGETS ─────────────────────────────────────────────────────────────────
 
 class _QuickActionCard extends StatefulWidget {
   final IconData icon;
@@ -481,7 +514,6 @@ class _TodaySummaryCard extends StatelessWidget {
           ),
           const Divider(height: 20),
 
-          // Calorie overview row
           Row(
             children: [
               Expanded(child: _StatPill(
@@ -511,7 +543,6 @@ class _TodaySummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Water + Weight
           Row(
             children: [
               Expanded(child: _StatPill(
@@ -523,17 +554,23 @@ class _TodaySummaryCard extends StatelessWidget {
               )),
               const SizedBox(width: 8),
               if (record.weightKg != null)
-                Expanded(child: _StatPill(
-                  icon: Icons.monitor_weight,
-                  label: 'Weight',
-                  value: record.weightKg!.toStringAsFixed(1),
-                  unit: 'kg',
-                  color: const Color(0xFF9C27B0),
-                )),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const WeightProgressScreen()),
+                    ),
+                    child: _StatPill(
+                      icon: Icons.monitor_weight,
+                      label: 'Weight',
+                      value: record.weightKg!.toStringAsFixed(1),
+                      unit: 'kg',
+                      color: const Color(0xFF9C27B0),
+                    ),
+                  ),
+                ),
             ],
           ),
 
-          // Exercises
           if ((filter == LogFilter.all || filter == LogFilter.exercise) && record.exercises.isNotEmpty) ...[
             const Divider(height: 20),
             Text('Exercises', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade700)),

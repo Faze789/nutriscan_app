@@ -64,4 +64,27 @@ class HealthArticle {
         generatedAt: DateTime.parse(json['generatedAt'] as String),
         isFavorite: json['isFavorite'] as bool? ?? false,
       );
+
+  Map<String, dynamic> toSupabase() => {
+        'id': id,
+        'title': title,
+        'summary': summary,
+        'content': content,
+        'category': category,
+        'tags': tags,
+        'image_url': imageUrl,
+        'generated_at': generatedAt.toIso8601String(),
+      };
+
+  factory HealthArticle.fromSupabase(Map<String, dynamic> json) => HealthArticle(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        summary: json['summary'] as String,
+        content: json['content'] as String,
+        category: json['category'] as String,
+        tags: _parseTags(json['tags']),
+        imageUrl: json['image_url'] as String?,
+        generatedAt: DateTime.parse(json['generated_at'] as String),
+        isFavorite: false,
+      );
 }

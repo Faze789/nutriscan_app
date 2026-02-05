@@ -72,19 +72,53 @@ class DailyRecord {
         id: json['id'] as String,
         userUid: json['userUid'] as String,
         date: DateTime.parse(json['date'] as String),
-        caloriesConsumed: (json['caloriesConsumed'] as num).toDouble(),
-        caloriesBurned: (json['caloriesBurned'] as num).toDouble(),
-        waterMl: (json['waterMl'] as num).toDouble(),
-        waterGlasses: json['waterGlasses'] as int,
-        exercises: (json['exercises'] as List)
-            .map((e) => ExerciseEntry.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        caloriesConsumed: (json['caloriesConsumed'] as num?)?.toDouble() ?? 0,
+        caloriesBurned: (json['caloriesBurned'] as num?)?.toDouble() ?? 0,
+        waterMl: (json['waterMl'] as num?)?.toDouble() ?? 0,
+        waterGlasses: (json['waterGlasses'] as num?)?.toInt() ?? 0,
+        exercises: (json['exercises'] as List?)
+            ?.map((e) => ExerciseEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
         weightKg: json['weightKg'] != null
             ? (json['weightKg'] as num).toDouble()
             : null,
         notes: json['notes'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
+
+  Map<String, dynamic> toSupabase() => {
+        'id': id,
+        'user_id': userUid,
+        'date': '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+        'calories_consumed': caloriesConsumed,
+        'calories_burned': caloriesBurned,
+        'water_ml': waterMl,
+        'water_glasses': waterGlasses,
+        'exercises': exercises.map((e) => e.toJson()).toList(),
+        'weight_kg': weightKg,
+        'notes': notes,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+
+  factory DailyRecord.fromSupabase(Map<String, dynamic> json) => DailyRecord(
+        id: json['id'] as String,
+        userUid: json['user_id'] as String,
+        date: DateTime.parse(json['date'] as String),
+        caloriesConsumed: (json['calories_consumed'] as num?)?.toDouble() ?? 0,
+        caloriesBurned: (json['calories_burned'] as num?)?.toDouble() ?? 0,
+        waterMl: (json['water_ml'] as num?)?.toDouble() ?? 0,
+        waterGlasses: (json['water_glasses'] as num?)?.toInt() ?? 0,
+        exercises: (json['exercises'] as List?)
+            ?.map((e) => ExerciseEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
+        weightKg: json['weight_kg'] != null
+            ? (json['weight_kg'] as num).toDouble()
+            : null,
+        notes: json['notes'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
       );
 }
 

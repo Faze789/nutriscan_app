@@ -3,7 +3,6 @@ import '../constants/app_constants.dart';
 class CalorieCalculator {
   CalorieCalculator._();
 
-  /// Mifflin-St Jeor equation for BMR
   static double calculateBMR({
     required double weightKg,
     required double heightCm,
@@ -17,7 +16,6 @@ class CalorieCalculator {
     }
   }
 
-  /// TDEE = BMR * activity multiplier
   static double calculateTDEE({
     required double bmr,
     required String activityLevel,
@@ -27,7 +25,6 @@ class CalorieCalculator {
     return bmr * multiplier;
   }
 
-  /// Target calories based on goal
   static double calculateTargetCalories({
     required double tdee,
     required String goal,
@@ -36,8 +33,6 @@ class CalorieCalculator {
     return tdee * multiplier;
   }
 
-  /// Macro split (grams) for a given calorie target
-  /// Default: 30% protein, 40% carbs, 30% fat
   static Map<String, double> calculateMacros({
     required double targetCalories,
     double proteinPct = 0.30,

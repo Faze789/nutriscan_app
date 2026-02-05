@@ -76,31 +76,34 @@ class _LogExerciseSheetState extends ConsumerState<LogExerciseSheet> {
     if (name.isEmpty || duration <= 0) return;
 
     setState(() => _saving = true);
+    try {
+      final uid = await ref.read(currentUidProvider.future);
+      if (uid == null) return;
 
-    final uid = await ref.read(currentUidProvider.future);
-    if (uid == null) return;
+      final repo = ref.read(dailyRecordRepoProvider);
+      final now = DateTime.now();
+      final existing = await repo.getRecordForDate(uid, now);
+      final exercise = ExerciseEntry(name: name, durationMinutes: duration, caloriesBurned: calories);
 
-    final repo = ref.read(dailyRecordRepoProvider);
-    final now = DateTime.now();
-    final existing = await repo.getRecordForDate(uid, now);
-    final exercise = ExerciseEntry(name: name, durationMinutes: duration, caloriesBurned: calories);
+      if (existing != null) {
+        final exercises = List<ExerciseEntry>.from(existing.exercises)..add(exercise);
+        await repo.saveRecord(existing.copyWith(
+          exercises: exercises,
+          caloriesBurned: existing.caloriesBurned + calories,
+        ));
+      } else {
+        await repo.saveRecord(DailyRecord(
+          id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
+          userUid: uid,
+          date: now,
+          exercises: [exercise],
+          caloriesBurned: calories,
+        ));
+      }
 
-    if (existing != null) {
-      final exercises = List<ExerciseEntry>.from(existing.exercises)..add(exercise);
-      await repo.saveRecord(existing.copyWith(
-        exercises: exercises,
-        caloriesBurned: existing.caloriesBurned + calories,
-      ));
-    } else {
-      await repo.saveRecord(DailyRecord(
-        id: '${uid}_${now.year}${now.month}${now.day}',
-        userUid: uid,
-        date: now,
-        exercises: [exercise],
-        caloriesBurned: calories,
-      ));
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-
-    if (mounted) Navigator.of(context).pop();
   }
 }

@@ -1,21 +1,21 @@
-import '../datasources/local_database.dart';
+import '../../services/supabase_service.dart';
 import '../models/user_favorites.dart';
 
 class FavoritesRepository {
-  static const _collection = 'user_favorites';
+  static const _table = 'user_favorites';
 
   Future<UserFavorites> getFavorites(String uid) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final match = items.where((e) => e['userUid'] == uid);
-    if (match.isEmpty) return UserFavorites(userUid: uid);
-    return UserFavorites.fromJson(match.first);
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('user_id', uid)
+        .maybeSingle();
+    if (response == null) return UserFavorites(userUid: uid);
+    return UserFavorites.fromSupabase(response);
   }
 
   Future<void> _save(UserFavorites favs) async {
-    final items = await LocalDatabase.readAll(_collection);
-    items.removeWhere((e) => e['userUid'] == favs.userUid);
-    items.add(favs.toJson());
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).upsert(favs.toSupabase());
   }
 
   Future<void> toggleArticleFavorite(String uid, String articleId) async {

@@ -7,15 +7,22 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/daily_record_provider.dart';
 import '../../providers/providers.dart';
 import '../../providers/personalization_provider.dart';
+import '../../providers/streak_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/calorie_ring.dart';
 import '../../widgets/macro_bar.dart';
 import '../../widgets/meal_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/personalized_tip_card.dart';
+import '../../widgets/streak_card.dart';
 import '../../widgets/weekly_chart.dart';
+import '../achievements/achievements_screen.dart';
 import '../diet_plan/diet_plan_screen.dart';
+import '../recipes/recipes_screen.dart';
 import '../profile/profile_setup_screen.dart';
 import '../auth/login_screen.dart';
+import '../settings/reminders_screen.dart';
+import '../reports/reports_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -27,6 +34,17 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _generatingPlan = false;
 
+  IconData _themeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+      case ThemeMode.light:
+        return Icons.light_mode;
+      case ThemeMode.dark:
+        return Icons.dark_mode;
+    }
+  }
+
   Future<void> _generateMealPlan() async {
     final profile = await ref.read(userProfileProvider.future);
     if (profile == null) return;
@@ -35,9 +53,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     try {
       final days = await ref.read(geminiServiceProvider).generateMealPlan(profile);
       final uid = await ref.read(currentUidProvider.future);
+      if (uid == null) return;
       final plan = DietPlan(
         id: const Uuid().v4(),
-        userUid: uid!,
+        userUid: uid,
         generatedAt: DateTime.now(),
         days: days,
       );
@@ -103,7 +122,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               padding: const EdgeInsets.only(bottom: 24),
               physics: const BouncingScrollPhysics(),
               children: [
-                // App bar row
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
                   child: Row(
@@ -124,6 +142,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ),
                       IconButton(
+                        icon: const Icon(Icons.bar_chart_outlined),
+                        tooltip: 'Reports',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ReportsScreen()),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined),
+                        tooltip: 'Reminders',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RemindersScreen()),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(_themeIcon(ref.watch(themeProvider))),
+                        tooltip: 'Toggle theme',
+                        onPressed: () => ref.read(themeProvider.notifier).cycle(),
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.logout),
                         onPressed: () async {
                           await ref.read(authServiceProvider).logout();
@@ -138,9 +175,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                // Calorie ring
+                ref.watch(userStreakProvider).when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (streak) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: StreakCard(
+                      streak: streak,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                      ),
+                    ),
+                  ),
+                ),
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: AnimatedGlassCard(
@@ -162,7 +212,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Macro bars
                 totalsAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -187,7 +236,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── AI Meal Plan CTA (when no plan exists) ───────
                 dietAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -249,7 +297,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   },
                 ),
 
-                // Personalized tips
                 tipsAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -283,7 +330,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   },
                 ),
 
-                // ── Your Meal Plan (when exists) ─────────────────
                 dietAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
@@ -332,7 +378,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── Weekly Progress Snapshot ──────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: AnimatedGlassCard(
+                    delayMs: 350,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RecipesScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.restaurant_menu, color: AppTheme.accent, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('My Recipes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text('Save and track your favorite recipes',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text('Weekly Progress', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -354,7 +437,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Today's meals
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text("Today's Meals", style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),

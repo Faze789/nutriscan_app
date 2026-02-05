@@ -1,80 +1,62 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_service.dart';
 
-/// Mock authentication service with local session persistence.
-/// Drop-in replaceable with Firebase Auth.
 class AuthService {
-  static const _keyUid = 'auth_uid';
-  static const _keyEmail = 'auth_email';
-  static const _keyName = 'auth_name';
-  static const _keyLoggedIn = 'auth_logged_in';
+  SupabaseClient get _client => SupabaseService.client;
 
-  final Uuid _uuid = const Uuid();
-
-  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
-
-  /// Check if user is logged in.
   Future<bool> isLoggedIn() async {
-    final prefs = await _prefs;
-    return prefs.getBool(_keyLoggedIn) ?? false;
+    return _client.auth.currentUser != null;
   }
 
-  /// Get current user UID.
   Future<String?> getCurrentUid() async {
-    final prefs = await _prefs;
-    return prefs.getString(_keyUid);
+    return _client.auth.currentUser?.id;
   }
 
-  /// Mock sign-up: generates a UID and persists session.
   Future<String> signUp({
     required String name,
     required String email,
     required String password,
   }) async {
-    // In production, replace with Firebase Auth createUserWithEmailAndPassword
-    final uid = _uuid.v4();
-    final prefs = await _prefs;
-    await prefs.setString(_keyUid, uid);
-    await prefs.setString(_keyEmail, email);
-    await prefs.setString(_keyName, name);
-    await prefs.setBool(_keyLoggedIn, true);
-    return uid;
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name},
+    );
+
+    if (response.user == null) {
+      throw Exception('Sign up failed');
+    }
+
+    return response.user!.id;
   }
 
-  /// Mock login: validates against stored email (demo only).
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    final prefs = await _prefs;
-    final storedEmail = prefs.getString(_keyEmail);
+    final response = await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
 
-    if (storedEmail == null) {
-      throw Exception('No account found. Please sign up first.');
-    }
-    if (storedEmail != email) {
-      throw Exception('Invalid email or password.');
+    if (response.user == null) {
+      throw Exception('Invalid email or password');
     }
 
-    await prefs.setBool(_keyLoggedIn, true);
-    return prefs.getString(_keyUid)!;
+    return response.user!.id;
   }
 
-  /// Logout: clears session flag (keeps account data for re-login).
   Future<void> logout() async {
-    final prefs = await _prefs;
-    await prefs.setBool(_keyLoggedIn, false);
+    await _client.auth.signOut();
   }
 
-  /// Get stored user name.
   Future<String?> getUserName() async {
-    final prefs = await _prefs;
-    return prefs.getString(_keyName);
+    return _client.auth.currentUser?.userMetadata?['name'] as String?;
   }
 
-  /// Get stored email.
   Future<String?> getUserEmail() async {
-    final prefs = await _prefs;
-    return prefs.getString(_keyEmail);
+    return _client.auth.currentUser?.email;
   }
+
+  Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 }

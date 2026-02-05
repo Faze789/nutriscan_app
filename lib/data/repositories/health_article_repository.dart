@@ -1,30 +1,35 @@
-import '../datasources/local_database.dart';
+import '../../services/supabase_service.dart';
 import '../models/health_article.dart';
 
 class HealthArticleRepository {
-  static const _collection = 'health_articles';
+  static const _table = 'health_articles';
 
   Future<List<HealthArticle>> getAll() async {
-    final items = await LocalDatabase.readAll(_collection);
-    return items.map((e) => HealthArticle.fromJson(e)).toList();
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .order('generated_at', ascending: false);
+
+    return (response as List)
+        .map((e) => HealthArticle.fromSupabase(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<HealthArticle>> getByCategory(String category) async {
-    final all = await getAll();
-    return all.where((a) => a.category == category).toList();
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('category', category)
+        .order('generated_at', ascending: false);
+
+    return (response as List)
+        .map((e) => HealthArticle.fromSupabase(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> saveArticles(List<HealthArticle> articles) async {
-    await LocalDatabase.writeAll(
-        _collection, articles.map((e) => e.toJson()).toList());
-  }
-
-  Future<void> toggleFavorite(String id) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final idx = items.indexWhere((e) => e['id'] == id);
-    if (idx != -1) {
-      items[idx]['isFavorite'] = !(items[idx]['isFavorite'] as bool? ?? false);
-      await LocalDatabase.writeAll(_collection, items);
+    for (final article in articles) {
+      await SupabaseService.client.from(_table).upsert(article.toSupabase());
     }
   }
 

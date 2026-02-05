@@ -24,7 +24,6 @@ class PersonalizationEngine {
   ) {
     final tips = <PersonalizedTip>[];
 
-    // Water reminder
     final glasses = todayRecord?.waterGlasses ?? 0;
     if (glasses < 4) {
       tips.add(const PersonalizedTip(
@@ -42,7 +41,6 @@ class PersonalizationEngine {
       ));
     }
 
-    // Goal-based tips
     switch (profile.goal) {
       case DietGoal.lose:
         if (profile.activityLevel == ActivityLevel.sedentary) {
@@ -81,7 +79,6 @@ class PersonalizationEngine {
         ));
     }
 
-    // Exercise reminder
     final exercised = todayRecord?.exercises.isNotEmpty ?? false;
     if (!exercised) {
       tips.add(const PersonalizedTip(

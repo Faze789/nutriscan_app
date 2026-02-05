@@ -1,26 +1,24 @@
-import '../datasources/local_database.dart';
+import '../../services/supabase_service.dart';
 import '../models/user_profile.dart';
 
 class UserRepository {
-  static const _collection = 'users';
+  static const _table = 'user_profiles';
 
   Future<UserProfile?> getUser(String uid) async {
-    final items = await LocalDatabase.readAll(_collection);
-    final match = items.where((e) => e['uid'] == uid);
-    if (match.isEmpty) return null;
-    return UserProfile.fromJson(match.first);
+    final response = await SupabaseService.client
+        .from(_table)
+        .select()
+        .eq('id', uid)
+        .maybeSingle();
+    if (response == null) return null;
+    return UserProfile.fromSupabase(response);
   }
 
   Future<void> saveUser(UserProfile user) async {
-    final items = await LocalDatabase.readAll(_collection);
-    items.removeWhere((e) => e['uid'] == user.uid);
-    items.add(user.toJson());
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).upsert(user.toSupabase());
   }
 
   Future<void> deleteUser(String uid) async {
-    final items = await LocalDatabase.readAll(_collection);
-    items.removeWhere((e) => e['uid'] == uid);
-    await LocalDatabase.writeAll(_collection, items);
+    await SupabaseService.client.from(_table).delete().eq('id', uid);
   }
 }

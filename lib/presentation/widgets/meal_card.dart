@@ -87,7 +87,9 @@ class _MealCardState extends State<MealCard> with SingleTickerProviderStateMixin
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.entry.mealType[0].toUpperCase() + widget.entry.mealType.substring(1),
+                                widget.entry.mealType.isNotEmpty
+                                    ? widget.entry.mealType[0].toUpperCase() + widget.entry.mealType.substring(1)
+                                    : 'Meal',
                                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                               ),
                               Text(

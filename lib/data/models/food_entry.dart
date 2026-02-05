@@ -44,15 +44,45 @@ class FoodEntry {
         userUid: json['userUid'] as String,
         date: DateTime.parse(json['date'] as String),
         mealType: json['mealType'] as String,
-        items: (json['items'] as List)
-            .map((e) => FoodItem.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        items: (json['items'] as List?)
+            ?.map((e) => FoodItem.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
         totalCalories: (json['totalCalories'] as num).toDouble(),
         totalProtein: (json['totalProtein'] as num).toDouble(),
         totalCarbs: (json['totalCarbs'] as num).toDouble(),
         totalFat: (json['totalFat'] as num).toDouble(),
         imagePath: json['imagePath'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+
+  Map<String, dynamic> toSupabase() => {
+        'id': id,
+        'user_id': userUid,
+        'date': date.toIso8601String(),
+        'meal_type': mealType,
+        'items': items.map((e) => e.toJson()).toList(),
+        'total_calories': totalCalories,
+        'total_protein': totalProtein,
+        'total_carbs': totalCarbs,
+        'total_fat': totalFat,
+        'image_path': imagePath,
+        'created_at': createdAt.toIso8601String(),
+      };
+
+  factory FoodEntry.fromSupabase(Map<String, dynamic> json) => FoodEntry(
+        id: json['id'] as String,
+        userUid: json['user_id'] as String,
+        date: DateTime.parse(json['date'] as String),
+        mealType: json['meal_type'] as String,
+        items: (json['items'] as List?)
+            ?.map((e) => FoodItem.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
+        totalCalories: (json['total_calories'] as num).toDouble(),
+        totalProtein: (json['total_protein'] as num).toDouble(),
+        totalCarbs: (json['total_carbs'] as num).toDouble(),
+        totalFat: (json['total_fat'] as num).toDouble(),
+        imagePath: json['image_path'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
       );
 }
 

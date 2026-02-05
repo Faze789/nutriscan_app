@@ -30,18 +30,24 @@ class DiscoverScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: filteredAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (articles) {
-                if (articles.isEmpty) {
-                  return const Center(child: Text('No articles yet. Pull to refresh!'));
-                }
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(healthArticlesProvider),
-                  child: ListView.builder(
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(healthArticlesProvider),
+              child: filteredAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (articles) {
+                  if (articles.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 200),
+                        Center(child: Text('No articles yet. Pull to refresh!')),
+                      ],
+                    );
+                  }
+                  return ListView.builder(
                     padding: const EdgeInsets.only(bottom: 16),
-                    physics: const BouncingScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     itemCount: articles.length,
                     itemBuilder: (_, i) => HealthArticleCard(
                       article: articles[i],
@@ -50,9 +56,9 @@ class DiscoverScreen extends ConsumerWidget {
                         MaterialPageRoute(builder: (_) => ArticleDetailScreen(article: articles[i])),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],

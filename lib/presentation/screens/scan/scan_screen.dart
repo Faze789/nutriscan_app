@@ -5,7 +5,10 @@ import 'package:uuid/uuid.dart';
 import 'dart:io';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/food_entry.dart';
+import '../../../data/models/food_favorite.dart';
+import '../../providers/food_favorites_provider.dart';
 import '../../providers/providers.dart';
+import '../../providers/streak_provider.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -80,11 +83,49 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
     await ref.read(foodRepoProvider).addEntry(entry);
 
+    // Streak update is non-critical — don't let it block meal logging
+    try {
+      await ref.read(streakRepoProvider).checkAndUpdateStreak(uid);
+      ref.invalidate(userStreakProvider);
+    } catch (_) {
+      // Streak table may not exist yet; meal is already saved
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Meal logged successfully!'), backgroundColor: AppTheme.primary),
       );
       Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _saveToFavorites() async {
+    if (_results == null || _results!.isEmpty) return;
+    final uid = await ref.read(currentUidProvider.future);
+    if (uid == null) return;
+
+    final repo = ref.read(foodFavoritesRepoProvider);
+    int saved = 0;
+    for (final item in _results!) {
+      await repo.addFavorite(FoodFavorite(
+        id: const Uuid().v4(),
+        userUid: uid,
+        name: item.name,
+        portion: item.portion,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        mealType: _mealType,
+      ));
+      saved++;
+    }
+    ref.invalidate(foodFavoritesProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$saved item(s) saved to favorites!'), backgroundColor: AppTheme.primary),
+      );
     }
   }
 
@@ -97,7 +138,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image area
             Container(
               height: 250,
               decoration: BoxDecoration(
@@ -123,7 +163,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Camera / Gallery buttons
             Row(
               children: [
                 Expanded(
@@ -145,7 +184,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Meal type selector
             Text('Meal Type', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Wrap(
@@ -160,7 +198,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Loading / Results
             if (_loading)
               const Center(
                 child: Column(
@@ -194,6 +231,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 onPressed: _save,
                 icon: const Icon(Icons.check),
                 label: const Text('Log This Meal'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _saveToFavorites,
+                icon: const Icon(Icons.favorite_border),
+                label: const Text('Save Items to Favorites'),
               ),
             ],
           ],

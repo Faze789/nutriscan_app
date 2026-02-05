@@ -113,7 +113,6 @@ class _RingPainter extends CustomPainter {
     final radius = size.width / 2 - 12;
     const strokeWidth = 14.0;
 
-    // Background ring
     canvas.drawCircle(
       center, radius,
       Paint()
@@ -122,7 +121,6 @@ class _RingPainter extends CustomPainter {
         ..color = Colors.grey.shade200,
     );
 
-    // Gradient progress arc
     final sweepAngle = 2 * pi * progress.clamp(0.0, 1.0);
     final rect = Rect.fromCircle(center: center, radius: radius);
     final paint = Paint()
@@ -139,7 +137,6 @@ class _RingPainter extends CustomPainter {
 
     canvas.drawArc(rect, -pi / 2, sweepAngle, false, paint);
 
-    // Glow dot at end of arc
     if (progress > 0.05) {
       final dotAngle = -pi / 2 + sweepAngle;
       final dotCenter = Offset(

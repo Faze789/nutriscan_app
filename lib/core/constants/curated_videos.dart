@@ -1,8 +1,5 @@
 import '../../data/models/video_recommendation.dart';
 
-/// Hardcoded curated list of real, publicly available YouTube videos.
-/// These serve as the primary video source — guaranteed to work.
-/// AI-generated recommendations supplement this list.
 class CuratedVideos {
   CuratedVideos._();
 
@@ -22,16 +19,14 @@ class CuratedVideos {
   static List<VideoRecommendation> getByGoal(String goal) =>
       getAll().where((v) => v.targetGoal == goal || v.targetGoal == 'general').toList();
 
-  // Real YouTube video IDs — verified working publicly available videos
   static const List<Map<String, dynamic>> _all = [
-    // ── Workout / Lose Weight ──
     {
       'id': 'cur_001',
       'videoId': 'ml6cT4AZdqI',
       'title': '20 Minute Full Body HIIT Workout - No Equipment',
       'channelName': 'THENX',
       'category': 'Workout',
-      'targetGoal': 'lose_weight',
+      'targetGoal': 'lose',
       'durationSeconds': 1200,
     },
     {
@@ -40,7 +35,7 @@ class CuratedVideos {
       'title': '30 Min Fat Burning Cardio Workout - No Equipment',
       'channelName': 'JEFIT',
       'category': 'Workout',
-      'targetGoal': 'lose_weight',
+      'targetGoal': 'lose',
       'durationSeconds': 1800,
     },
     {
@@ -49,18 +44,17 @@ class CuratedVideos {
       'title': '20 MIN FULL BODY WORKOUT - Beginner Friendly',
       'channelName': 'MadFit',
       'category': 'Workout',
-      'targetGoal': 'lose_weight',
+      'targetGoal': 'lose',
       'durationSeconds': 1200,
     },
 
-    // ── Workout / Gain Muscle ──
     {
       'id': 'cur_004',
       'videoId': 'vc1E5CfRfos',
       'title': 'Complete Upper Body Workout - Build Muscle at Home',
       'channelName': 'Jeff Nippard',
       'category': 'Workout',
-      'targetGoal': 'gain_muscle',
+      'targetGoal': 'gain',
       'durationSeconds': 2400,
     },
     {
@@ -69,7 +63,7 @@ class CuratedVideos {
       'title': 'Home Push Workout to Build Muscle - No Equipment',
       'channelName': 'Hybrid Calisthenics',
       'category': 'Workout',
-      'targetGoal': 'gain_muscle',
+      'targetGoal': 'gain',
       'durationSeconds': 900,
     },
     {
@@ -78,11 +72,10 @@ class CuratedVideos {
       'title': 'Leg Day Workout - Quads, Hamstrings, Glutes',
       'channelName': 'Athlean-X',
       'category': 'Workout',
-      'targetGoal': 'gain_muscle',
+      'targetGoal': 'gain',
       'durationSeconds': 1080,
     },
 
-    // ── Nutrition ──
     {
       'id': 'cur_007',
       'videoId': 'xyQY8a-ng6g',
@@ -98,7 +91,7 @@ class CuratedVideos {
       'title': 'How to Count Calories to Lose Fat',
       'channelName': 'Jeff Nippard',
       'category': 'Nutrition',
-      'targetGoal': 'lose_weight',
+      'targetGoal': 'lose',
       'durationSeconds': 900,
     },
     {
@@ -107,11 +100,10 @@ class CuratedVideos {
       'title': 'High Protein Meals for Muscle Building',
       'channelName': 'Buff Dudes',
       'category': 'Nutrition',
-      'targetGoal': 'gain_muscle',
+      'targetGoal': 'gain',
       'durationSeconds': 660,
     },
 
-    // ── Cooking ──
     {
       'id': 'cur_010',
       'videoId': 'Q7KGE7F8fRg',
@@ -127,7 +119,7 @@ class CuratedVideos {
       'title': 'Low Calorie High Volume Recipes for Weight Loss',
       'channelName': 'The Domestic Geek',
       'category': 'Cooking',
-      'targetGoal': 'lose_weight',
+      'targetGoal': 'lose',
       'durationSeconds': 720,
     },
     {
@@ -136,11 +128,10 @@ class CuratedVideos {
       'title': 'Easy High Protein Breakfast Ideas',
       'channelName': 'Ethan Chlebowski',
       'category': 'Cooking',
-      'targetGoal': 'gain_muscle',
+      'targetGoal': 'gain',
       'durationSeconds': 840,
     },
 
-    // ── Yoga ──
     {
       'id': 'cur_013',
       'videoId': 'v7AYKMP6rOE',
@@ -160,7 +151,6 @@ class CuratedVideos {
       'durationSeconds': 600,
     },
 
-    // ── Motivation ──
     {
       'id': 'cur_015',
       'videoId': 'mgmVOuLgFB0',
