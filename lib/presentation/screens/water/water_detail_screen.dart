@@ -82,15 +82,15 @@ class WaterDetailScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
             ),
             const SizedBox(height: 8),
-            Row(
+            const Row(
               children: [
-                _QuickAddBtn(ml: 100, ref: ref, context: context),
-                const SizedBox(width: 8),
-                _QuickAddBtn(ml: 250, ref: ref, context: context),
-                const SizedBox(width: 8),
-                _QuickAddBtn(ml: 500, ref: ref, context: context),
-                const SizedBox(width: 8),
-                _QuickAddBtn(ml: 750, ref: ref, context: context),
+                _QuickAddBtn(ml: 100),
+                SizedBox(width: 8),
+                _QuickAddBtn(ml: 250),
+                SizedBox(width: 8),
+                _QuickAddBtn(ml: 500),
+                SizedBox(width: 8),
+                _QuickAddBtn(ml: 750),
               ],
             ),
             const SizedBox(height: 20),
@@ -141,15 +141,13 @@ class WaterDetailScreen extends ConsumerWidget {
   }
 }
 
-class _QuickAddBtn extends StatelessWidget {
+class _QuickAddBtn extends ConsumerWidget {
   final int ml;
-  final WidgetRef ref;
-  final BuildContext context;
 
-  const _QuickAddBtn({required this.ml, required this.ref, required this.context});
+  const _QuickAddBtn({required this.ml});
 
   @override
-  Widget build(BuildContext outerContext) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Expanded(
       child: FilledButton.tonal(
         onPressed: () async {

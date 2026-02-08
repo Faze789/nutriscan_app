@@ -49,7 +49,7 @@ class _PersonalizedTipCardState extends State<PersonalizedTipCard> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(int.parse('FF${widget.tip.colorHex}', radix: 16));
+    final color = Color(int.tryParse('FF${widget.tip.colorHex}', radix: 16) ?? 0xFF4CAF50);
     final icon = _iconMap[widget.tip.icon] ?? Icons.lightbulb;
 
     return FadeTransition(

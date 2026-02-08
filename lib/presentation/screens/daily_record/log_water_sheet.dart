@@ -54,23 +54,31 @@ class _LogWaterSheetState extends ConsumerState<LogWaterSheet> {
     final uid = await ref.read(currentUidProvider.future);
     if (uid == null) return;
 
-    final repo = ref.read(dailyRecordRepoProvider);
-    final now = DateTime.now();
-    final existing = await repo.getRecordForDate(uid, now);
+    try {
+      final repo = ref.read(dailyRecordRepoProvider);
+      final now = DateTime.now();
+      final existing = await repo.getRecordForDate(uid, now);
 
-    if (existing != null) {
-      final total = existing.waterGlasses + _glasses;
-      await repo.saveRecord(existing.copyWith(waterGlasses: total, waterMl: total * 250));
-    } else {
-      await repo.saveRecord(DailyRecord(
-        id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
-        userUid: uid,
-        date: now,
-        waterGlasses: _glasses,
-        waterMl: _glasses * 250,
-      ));
+      if (existing != null) {
+        final total = existing.waterGlasses + _glasses;
+        await repo.saveRecord(existing.copyWith(waterGlasses: total, waterMl: total * 250));
+      } else {
+        await repo.saveRecord(DailyRecord(
+          id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
+          userUid: uid,
+          date: now,
+          waterGlasses: _glasses,
+          waterMl: _glasses * 250,
+        ));
+      }
+
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save water: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
-
-    if (mounted) Navigator.of(context).pop();
   }
 }

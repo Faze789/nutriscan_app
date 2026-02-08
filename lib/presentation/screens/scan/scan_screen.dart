@@ -42,7 +42,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     try {
       final bytes = await _imageFile!.readAsBytes();
       final items = await ref.read(geminiServiceProvider).analyzeImage(bytes);
-      setState(() => _results = items);
+      if (mounted) setState(() => _results = items);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

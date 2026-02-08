@@ -19,6 +19,7 @@ class _DietPlanScreenState extends ConsumerState<DietPlanScreen> {
   Future<void> _generate() async {
     final profile = await ref.read(userProfileProvider.future);
     if (profile == null) return;
+    if (!mounted) return;
 
     setState(() => _generating = true);
     try {

@@ -42,12 +42,13 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
 
     final weight = double.tryParse(_weightCtrl.text);
     final height = double.tryParse(_heightCtrl.text);
     final age = int.tryParse(_ageCtrl.text);
     if (weight == null || height == null || age == null) return;
+
+    setState(() => _loading = true);
 
     final bmr = CalorieCalculator.calculateBMR(
       weightKg: weight, heightCm: height, age: age, isMale: _isMale,

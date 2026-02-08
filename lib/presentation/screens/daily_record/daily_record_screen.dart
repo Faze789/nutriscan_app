@@ -288,24 +288,28 @@ class _TodayTab extends ConsumerWidget {
   }
 
   Future<void> _updateWater(WidgetRef ref, int current, int delta) async {
-    final uid = await ref.read(currentUidProvider.future);
-    if (uid == null) return;
-    final repo = ref.read(dailyRecordRepoProvider);
-    final existing = await repo.getRecordForDate(uid, DateTime.now());
-    final glasses = (current + delta).clamp(0, 20);
-    if (existing != null) {
-      await repo.saveRecord(existing.copyWith(waterGlasses: glasses, waterMl: glasses * 250));
-    } else {
-      final now = DateTime.now();
-      await repo.saveRecord(DailyRecord(
-        id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
-        userUid: uid,
-        date: now,
-        waterGlasses: glasses,
-        waterMl: glasses * 250,
-      ));
+    try {
+      final uid = await ref.read(currentUidProvider.future);
+      if (uid == null) return;
+      final repo = ref.read(dailyRecordRepoProvider);
+      final existing = await repo.getRecordForDate(uid, DateTime.now());
+      final glasses = (current + delta).clamp(0, 20);
+      if (existing != null) {
+        await repo.saveRecord(existing.copyWith(waterGlasses: glasses, waterMl: glasses * 250));
+      } else {
+        final now = DateTime.now();
+        await repo.saveRecord(DailyRecord(
+          id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
+          userUid: uid,
+          date: now,
+          waterGlasses: glasses,
+          waterMl: glasses * 250,
+        ));
+      }
+      ref.invalidate(todayRecordProvider);
+    } catch (e) {
+      // Water update failed silently; UI stays consistent
     }
-    ref.invalidate(todayRecordProvider);
   }
 
   void _showWeightDialog(BuildContext context, WidgetRef ref) {
@@ -342,35 +346,43 @@ class _TodayTab extends ConsumerWidget {
             onPressed: () async {
               final weight = double.tryParse(controller.text);
               if (weight == null || weight <= 0) return;
-              final uid = await ref.read(currentUidProvider.future);
-              if (uid == null) return;
-              final repo = ref.read(dailyRecordRepoProvider);
-              final existing = await repo.getRecordForDate(uid, DateTime.now());
-              if (existing != null) {
-                await repo.saveRecord(existing.copyWith(weightKg: weight));
-              } else {
-                final now = DateTime.now();
-                await repo.saveRecord(DailyRecord(
-                  id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
+              try {
+                final uid = await ref.read(currentUidProvider.future);
+                if (uid == null) return;
+                final repo = ref.read(dailyRecordRepoProvider);
+                final existing = await repo.getRecordForDate(uid, DateTime.now());
+                if (existing != null) {
+                  await repo.saveRecord(existing.copyWith(weightKg: weight));
+                } else {
+                  final now = DateTime.now();
+                  await repo.saveRecord(DailyRecord(
+                    id: '${uid}_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}',
+                    userUid: uid,
+                    date: now,
+                    weightKg: weight,
+                  ));
+                }
+
+                final weightLogRepo = ref.read(weightLogRepoProvider);
+                await weightLogRepo.addLog(WeightLog(
+                  id: const Uuid().v4(),
                   userUid: uid,
-                  date: now,
+                  date: DateTime.now(),
                   weightKg: weight,
+                  notes: notesController.text.isNotEmpty ? notesController.text : null,
                 ));
+
+                ref.invalidate(todayRecordProvider);
+                ref.invalidate(weightLogsProvider);
+                ref.invalidate(latestWeightProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('Failed to save weight: $e'), backgroundColor: Colors.red),
+                  );
+                }
               }
-
-              final weightLogRepo = ref.read(weightLogRepoProvider);
-              await weightLogRepo.addLog(WeightLog(
-                id: const Uuid().v4(),
-                userUid: uid,
-                date: DateTime.now(),
-                weightKg: weight,
-                notes: notesController.text.isNotEmpty ? notesController.text : null,
-              ));
-
-              ref.invalidate(todayRecordProvider);
-              ref.invalidate(weightLogsProvider);
-              ref.invalidate(latestWeightProvider);
-              if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Save'),
           ),

@@ -40,16 +40,16 @@ class FoodFavorite {
       };
 
   factory FoodFavorite.fromSupabase(Map<String, dynamic> json) => FoodFavorite(
-        id: json['id'] as String,
-        userUid: json['user_id'] as String,
-        name: json['name'] as String,
-        portion: json['portion'] as String,
-        calories: (json['calories'] as num).toDouble(),
-        protein: (json['protein'] as num).toDouble(),
-        carbs: (json['carbs'] as num).toDouble(),
-        fat: (json['fat'] as num).toDouble(),
+        id: json['id'] as String? ?? '',
+        userUid: json['user_id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        portion: json['portion'] as String? ?? '',
+        calories: (json['calories'] as num?)?.toDouble() ?? 0,
+        protein: (json['protein'] as num?)?.toDouble() ?? 0,
+        carbs: (json['carbs'] as num?)?.toDouble() ?? 0,
+        fat: (json['fat'] as num?)?.toDouble() ?? 0,
         mealType: json['meal_type'] as String?,
-        useCount: json['use_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        useCount: (json['use_count'] as num?)?.toInt() ?? 0,
+        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
       );
 }

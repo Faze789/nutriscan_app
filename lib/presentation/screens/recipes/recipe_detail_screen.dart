@@ -161,9 +161,23 @@ class RecipeDetailScreen extends ConsumerWidget {
       totalFat: recipe.fatPerServing,
     );
 
-    await ref.read(foodRepoProvider).addEntry(entry);
-    await ref.read(streakRepoProvider).checkAndUpdateStreak(uid);
-    ref.invalidate(userStreakProvider);
+    try {
+      await ref.read(foodRepoProvider).addEntry(entry);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to log meal: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
+    try {
+      await ref.read(streakRepoProvider).checkAndUpdateStreak(uid);
+      ref.invalidate(userStreakProvider);
+    } catch (_) {
+      // Streak update is non-critical
+    }
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -192,9 +206,17 @@ class RecipeDetailScreen extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await ref.read(recipeRepoProvider).deleteRecipe(recipe.id);
-      ref.invalidate(recipesProvider);
-      if (context.mounted) Navigator.pop(context);
+      try {
+        await ref.read(recipeRepoProvider).deleteRecipe(recipe.id);
+        ref.invalidate(recipesProvider);
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete recipe: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
     }
   }
 }

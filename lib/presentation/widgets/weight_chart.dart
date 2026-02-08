@@ -116,7 +116,7 @@ class WeightChart extends StatelessWidget {
             touchTooltipData: LineTouchTooltipData(
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
-                  final idx = spot.x.toInt();
+                  final idx = spot.x.toInt().clamp(0, sorted.length - 1);
                   final log = sorted[idx];
                   return LineTooltipItem(
                     '${log.weightKg.toStringAsFixed(1)} kg\n${DateFormat('MMM d').format(log.date)}',

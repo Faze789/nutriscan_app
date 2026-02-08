@@ -42,12 +42,12 @@ class UserReminder {
       };
 
   factory UserReminder.fromSupabase(Map<String, dynamic> json) => UserReminder(
-        id: json['id'] as String,
-        userUid: json['user_id'] as String,
-        type: json['type'] as String,
-        time: json['time'] as String,
-        isActive: json['is_active'] as bool,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        id: json['id'] as String? ?? '',
+        userUid: json['user_id'] as String? ?? '',
+        type: json['type'] as String? ?? '',
+        time: json['time'] as String? ?? '09:00',
+        isActive: json['is_active'] as bool? ?? true,
+        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
       );
 }
 

@@ -78,14 +78,14 @@ class VideoRecommendation {
 
   factory VideoRecommendation.fromSupabase(Map<String, dynamic> json) =>
       VideoRecommendation(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        channelName: json['channel_name'] as String,
-        youtubeUrl: json['youtube_url'] as String,
-        thumbnailUrl: json['thumbnail_url'] as String,
-        category: json['category'] as String,
-        targetGoal: json['target_goal'] as String,
-        durationSeconds: json['duration_seconds'] as int,
-        addedAt: DateTime.parse(json['added_at'] as String),
+        id: json['id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        channelName: json['channel_name'] as String? ?? '',
+        youtubeUrl: json['youtube_url'] as String? ?? '',
+        thumbnailUrl: json['thumbnail_url'] as String? ?? '',
+        category: json['category'] as String? ?? '',
+        targetGoal: json['target_goal'] as String? ?? '',
+        durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+        addedAt: DateTime.tryParse(json['added_at'] as String? ?? '') ?? DateTime.now(),
       );
 }

@@ -48,6 +48,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _generateMealPlan() async {
     final profile = await ref.read(userProfileProvider.future);
     if (profile == null) return;
+    if (!mounted) return;
 
     setState(() => _generatingPlan = true);
     try {
