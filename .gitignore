@@ -26,3 +26,6 @@ nul
 
 # Environment variables (API keys)
 .env
+
+# Tool configs
+.claude/
