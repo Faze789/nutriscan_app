@@ -324,7 +324,7 @@ class _TodayTab extends ConsumerWidget {
           children: [
             TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 hintText: 'Weight in kg',
                 suffixText: 'kg',
@@ -341,11 +341,23 @@ class _TodayTab extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              controller.dispose();
+              notesController.dispose();
+            },
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () async {
               final weight = double.tryParse(controller.text);
-              if (weight == null || weight <= 0) return;
+              if (weight == null || weight <= 0 || weight > 500) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid weight (1-500 kg)'), backgroundColor: Colors.red),
+                );
+                return;
+              }
               try {
                 final uid = await ref.read(currentUidProvider.future);
                 if (uid == null) return;
@@ -382,6 +394,9 @@ class _TodayTab extends ConsumerWidget {
                     SnackBar(content: Text('Failed to save weight: $e'), backgroundColor: Colors.red),
                   );
                 }
+              } finally {
+                controller.dispose();
+                notesController.dispose();
               }
             },
             child: const Text('Save'),

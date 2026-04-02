@@ -120,8 +120,8 @@ class WeightChart extends StatelessWidget {
                   final log = sorted[idx];
                   return LineTooltipItem(
                     '${log.weightKg.toStringAsFixed(1)} kg\n${DateFormat('MMM d').format(log.date)}',
-                    TextStyle(
-                      color: isDark ? Colors.white : Colors.white,
+                    const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),

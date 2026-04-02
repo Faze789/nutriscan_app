@@ -177,9 +177,9 @@ class _ReminderTile extends StatelessWidget {
     final isActive = reminder?.isActive ?? false;
     final timeStr = reminder?.time ?? ReminderType.defaultTime(type);
     final parts = timeStr.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    final timeOfDay = TimeOfDay(hour: hour, minute: minute);
+    final hour = parts.length >= 2 ? (int.tryParse(parts[0]) ?? 8) : 8;
+    final minute = parts.length >= 2 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    final timeOfDay = TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
 
     return GlassCard(
       child: Row(
