@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../providers/providers.dart';
 import '../home/home_shell.dart';
+import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -42,8 +43,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString();
+        String displayMsg;
+        if (msg.contains('Invalid login credentials') || msg.contains('invalid')) {
+          displayMsg = 'Invalid email or password. Please try again.';
+        } else if (msg.contains('Email not confirmed')) {
+          displayMsg = 'Please verify your email before logging in.';
+        } else if (msg.contains('too many requests') || msg.contains('rate limit')) {
+          displayMsg = 'Too many login attempts. Please try again later.';
+        } else {
+          displayMsg = 'Login failed. Please check your credentials.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(displayMsg), backgroundColor: AppTheme.error),
         );
       }
     } finally {
@@ -76,8 +88,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
-                    validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Email is required';
+                      final emailRegex = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$');
+                      if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email address';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -93,7 +111,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
                   ),
-                  const SizedBox(height: 28),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                      ),
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

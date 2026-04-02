@@ -16,13 +16,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
   bool _loading = false;
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
     super.dispose();
   }
 
@@ -43,8 +47,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString();
+        String displayMsg;
+        if (msg.contains('already registered') || msg.contains('already exists')) {
+          displayMsg = 'An account with this email already exists. Try logging in.';
+        } else if (msg.contains('weak password') || msg.contains('password')) {
+          displayMsg = 'Password is too weak. Use at least 6 characters with letters and numbers.';
+        } else if (msg.contains('rate limit') || msg.contains('too many')) {
+          displayMsg = 'Too many attempts. Please try again later.';
+        } else {
+          displayMsg = 'Sign up failed. Please try again.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.error),
+          SnackBar(content: Text(displayMsg), backgroundColor: AppTheme.error),
         );
       }
     } finally {
@@ -65,22 +80,64 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               children: [
                 TextFormField(
                   controller: _nameCtrl,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Name is required';
+                    if (v.trim().length < 2) return 'Name must be at least 2 characters';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    final emailRegex = RegExp(r'^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,}$');
+                    if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email address';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock_outline)),
-                  validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                  obscureText: _obscurePass,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePass ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password is required';
+                    if (v.length < 6) return 'Password must be at least 6 characters';
+                    if (!v.contains(RegExp(r'[A-Za-z]'))) return 'Password must contain at least one letter';
+                    if (!v.contains(RegExp(r'[0-9]'))) return 'Password must contain at least one number';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirmPassCtrl,
+                  obscureText: _obscureConfirm,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                    if (v != _passCtrl.text) return 'Passwords do not match';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 28),
                 SizedBox(

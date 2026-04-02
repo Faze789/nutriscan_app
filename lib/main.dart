@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/home/home_shell.dart';
 import 'services/connectivity_service.dart';
 import 'services/notification_service.dart';
@@ -66,8 +68,12 @@ class _AuthGate extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, __) => const LoginScreen(),
-      data: (state) =>
-          state.session != null ? const HomeShell() : const LoginScreen(),
+      data: (state) {
+        if (state.event == AuthChangeEvent.passwordRecovery) {
+          return const ResetPasswordScreen();
+        }
+        return state.session != null ? const HomeShell() : const LoginScreen();
+      },
     );
   }
 }
