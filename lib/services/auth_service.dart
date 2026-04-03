@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 
@@ -47,7 +48,11 @@ class AuthService {
   }
 
   Future<void> resetPassword({required String email}) async {
-    await _client.auth.resetPasswordForEmail(email);
+    // On web, use the current origin so the reset link redirects back
+    // to the deployed app (e.g. https://nutriscan-app-alpha.vercel.app)
+    // instead of Supabase's default Site URL (localhost:3000).
+    final redirectTo = kIsWeb ? Uri.base.origin : null;
+    await _client.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
   }
 
   Future<void> updatePassword({required String newPassword}) async {
